@@ -8,18 +8,27 @@ dfk = DataFlowKernel(executors=[workers])
 # Define Apps
 @App('bash', dfk)
 def WireDelay(inputs=[], outputs=[], geoDir='', daqId='', fw=''):
-		pass
+		#pass
 		#print(inputs)
 		#print(inputs,outputs,geoDir,daqId,fw)
-#		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(inputs[0],outputs[0],geoDir,daqId,fw)
+		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(inputs[0],outputs[0],geoDir,daqId,fw)
 
 @App('python', dfk)
-def WireDelayMultiple(inputs=[], outFileNames=[], geoDir='', daqIds=[], firmwares=''):
-		for i in range(len(inputs)):
-				WireDelay(inputs=inputs[i],outputs=outFileNames[i],geoDir=geoDir,daqId=daqIds[i],fw=firmwares[i])
+def WireDelayMultiple(threshFiles=[], outFileNames=[], geoDir='', daqIds=[], firmwares=''):
+		#print(threshFiles, outFileNames, geoDir, daqIds, firmwares)
+		#print(threshFiles)
+		#print(len(threshFiles))
+		#print(range(len(threshFiles)))
+		for i in range(len(threshFiles)):
+				#print(i)
+				#print(threshFiles[i])
+				#print([threshFiles[i]])
+				#print([threshFiles[i]],[outFileNames[i]],geoDir,daqIds[i],firmwares[i])
+				WireDelay(inputs=[threshFiles[i]],outputs=[outFileNames[i]],geoDir=geoDir,daqId=daqIds[i],fw=firmwares[i])
 
 @App('bash', dfk)
 def Combine(inputs=[],outputs=[]):
+		#print(inputs,outputs)
 		return 'perl perl/Combine.pl ' + ' '.join(inputs) + ' ' + outputs[0]
 
 @App('bash', dfk)
@@ -54,8 +63,8 @@ args = parser.parse_args()
 
 
 # The Workflow
-print(args.thresholdAll)
-WireDelayMultiple(inputs=args.thresholdAll, outFileNames=args.wireDelayData, geoDir=args.geoDir, daqIds=args.detectors, firmwares=args.firmwares)
-Combine(inputs=args.wireDelayData, outputs=args.combineOut)
-Sort(inputs=args.combineOut, outputs=args.sortOut, key1=args.sort_sortKey1, key2=args.sort_sortKey2)
-EventSearch(inputs=args.sortOut, outputs=args.eventCandidates, gate=args.gate, detCoinc=args.detectorCoincidence, chanCoinc=args.channelCoincidence, eventCoinc=args.eventCoincidence)
+#print(args.thresholdAll)
+WireDelayMultiple(threshFiles=args.thresholdAll, outFileNames=args.wireDelayData, geoDir=args.geoDir, daqIds=args.detectors, firmwares=args.firmwares)
+Combine(inputs=args.wireDelayData, outputs=[args.combineOut])
+Sort(inputs=[args.combineOut], outputs=[args.sortOut], key1=args.sort_sortKey1, key2=args.sort_sortKey2)
+EventSearch(inputs=[args.sortOut], outputs=[args.eventCandidates], gate=args.gate, detCoinc=args.detectorCoincidence, chanCoinc=args.channelCoincidence, eventCoinc=args.eventCoincidence)
