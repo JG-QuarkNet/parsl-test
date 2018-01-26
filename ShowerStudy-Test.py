@@ -8,7 +8,10 @@ dfk = DataFlowKernel(executors=[workers])
 # Define Apps
 @App('bash', dfk)
 def WireDelay(inputs=[], outputs=[], geoDir='', daqId='', fw=''):
-		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(inputs[0],outputs[0],geoDir,daqId,fw)
+		pass
+		#print(inputs)
+		#print(inputs,outputs,geoDir,daqId,fw)
+#		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(inputs[0],outputs[0],geoDir,daqId,fw)
 
 @App('python', dfk)
 def WireDelayMultiple(inputs=[], outFileNames=[], geoDir='', daqIds=[], firmwares=''):
@@ -21,7 +24,7 @@ def Combine(inputs=[],outputs=[]):
 
 @App('bash', dfk)
 def Sort(inputs=[], outputs=[], key1='1', key2='1'):
-		return 'perl perl/Sort.pl %s %s %s %s' %(inputs[0],outputs[0],key1,key2)
+		return 'perl perl/Sort.pl %s %s %s %s' %(inputs[0], outputs[0], key1, key2)
 
 @App('bash', dfk)
 def EventSearch(inputs=[], outputs=[], gate='', detCoinc='2', chanCoinc='2', eventCoinc='2'):
@@ -51,6 +54,7 @@ args = parser.parse_args()
 
 
 # The Workflow
+print(args.thresholdAll)
 WireDelayMultiple(inputs=args.thresholdAll, outFileNames=args.wireDelayData, geoDir=args.geoDir, daqIds=args.detectors, firmwares=args.firmwares)
 Combine(inputs=args.wireDelayData, outputs=args.combineOut)
 Sort(inputs=args.combineOut, outputs=args.sortOut, key1=args.sort_sortKey1, key2=args.sort_sortKey2)
