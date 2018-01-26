@@ -5,32 +5,30 @@ from parsl import *
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
+# Define Apps
 @App('bash', dfk)
-def WireDelay(threshold, wireDelayOutput, geoDir, detector, firmware):
-		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(threshold,wireDelayOutput,geoDir,detector,firmware)
-#		return 'echo "perl perl/WireDelay.pl %s %s %s %s %s"' %(threshold,wireDelayOutput,geoDir,detector,firmware)
+def WireDelay(inputs=[], outputs=[], geoDir='', daqId='', fw=''):
+		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(inputs[0],outputs[0],geoDir,daqId,fw)
 
 @App('python', dfk)
-def WireDelayMultiple():
-		#print(args.thresholdAll,args.wireDelayData,args.geoDir,args.detectors,args.firmwares)
-		for i in range(len(args.thresholdAll)):
-				#print(args.thresholdAll[i],args.wireDelayData[i],args.geoDir,args.detectors[i],args.firmwares[i])
-				WireDelay(args.thresholdAll[i],args.wireDelayData[i],args.geoDir,args.detectors[i],args.firmwares[i])
+def WireDelayMultiple(inputs=[], outFileNames=[], geoDir='', daqIds=[], firmwares=''):
+		for i in range(len(inputs)):
+				WireDelay(inputs=inputs[i],outputs=outFileNames[i],geoDir=geoDir,daqId=daqIds[i],fw=firmwares[i])
 
 @App('bash', dfk)
-##def Combine():
-def Combine(CombineOutput):
-##		return 'perl perl/Combine.pl ' + ' '.join(args.wireDelayData) + ' ' + args.combineOut
-		return 'perl perl/Combine.pl ' + ' '.join(args.wireDelayData) + ' ' + CombineOutput
+def Combine(inputs=[],outputs=[]):
+		return 'perl perl/Combine.pl ' + ' '.join(inputs) + ' ' + outputs[0]
 
 @App('bash', dfk)
-def Sort(dataIn, fileOut, key1, key2):
-		return 'perl perl/Sort.pl %s %s %s %s' %(dataIn,fileOut,key1,key2)
+def Sort(inputs=[], outputs=[], key1='1', key2='1'):
+		return 'perl perl/Sort.pl %s %s %s %s' %(inputs[0],outputs[0],key1,key2)
 
 @App('bash', dfk)
-def EventSearch(dataIn, fileOut, gate, detectorCoincidence, channelCoincidence, eventCoincidence):
-		return 'perl perl/EventSearch.pl %s %s %s %s %s %s' %(dataIn,fileOut,gate,detectorCoincidence,channelCoincidence,eventCoincidence)
-		
+def EventSearch(inputs=[], outputs=[], gate='', detCoinc='2', chanCoinc='2', eventCoinc='2'):
+		return 'perl perl/EventSearch.pl %s %s %s %s %s %s' %(inputs[0],outputs[0],gate,detCoinc,chanCoinc,eventCoinc)
+
+
+# Parse the command-line arguments
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--thresholdAll", nargs='+', help="All threshold files")
@@ -51,7 +49,9 @@ parser.add_argument("--eventCandidates", help="eventCandidates file")
 
 args = parser.parse_args()
 
-WireDelayMultiple()
-Combine(args.combineOut)
-Sort(args.combineOut, args.sortOut, args.sort_sortKey1, args.sort_sortKey2)
-EventSearch(args.sortOut, args.eventCandidates, args.gate, args.detectorCoincidence, args.channelCoincidence, args.eventCoincidence)
+
+# The Workflow
+WireDelayMultiple(inputs=args.thresholdAll, outFileNames=args.wireDelayData, geoDir=args.geoDir, daqIds=args.detectors, firmwares=args.firmwares)
+Combine(inputs=args.wireDelayData, outputs=args.combineOut)
+Sort(inputs=args.combineOut, outputs=args.sortOut, key1=args.sort_sortKey1, key2=args.sort_sortKey2)
+EventSearch(inputs=args.sortOut, outputs=args.eventCandidates, gate=args.gate, detCoinc=args.detectorCoincidence, chanCoinc=args.channelCoincidence, eventCoinc=args.eventCoincidence)
