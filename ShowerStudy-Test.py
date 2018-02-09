@@ -5,7 +5,7 @@ from parsl import *
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
-# Define Apps
+## Define Apps ##
 @App('bash', dfk)
 def WireDelay(inputs=[], outputs=[], geoDir='', daqId='', fw=''):
 		#pass
@@ -17,8 +17,6 @@ def WireDelay(inputs=[], outputs=[], geoDir='', daqId='', fw=''):
 def WireDelayMultiple(threshFiles=[], outFileNames=[], geoDir='', daqIds=[], firmwares=''):
 		#print(threshFiles, outFileNames, geoDir, daqIds, firmwares)
 		#print(threshFiles)
-		#print(len(threshFiles))
-		#print(range(len(threshFiles)))
 		for i in range(len(threshFiles)):
 				#print(i)
 				#print(threshFiles[i])
@@ -40,16 +38,16 @@ def EventSearch(inputs=[], outputs=[], gate='', detCoinc='2', chanCoinc='2', eve
 		return 'perl perl/EventSearch.pl %s %s %s %s %s %s' %(inputs[0],outputs[0],gate,detCoinc,chanCoinc,eventCoinc)
 
 
-# Parse the command-line arguments
+## Parse the command-line arguments ##
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--thresholdAll", nargs='+', help="All threshold files")
-parser.add_argument("--wireDelayData", nargs='+', help="Wire delay data filenames")
+parser.add_argument("--wireDelayData", nargs='+', help="Filenames for intermediate Wire Delay data")
 parser.add_argument("--geoDir", help="Directory containing DAQ ID directories that contain .geo files")
 #parser.add_argument("--geoFiles", nargs='+', help=".geo filenames for each CRD")
 parser.add_argument("--detectors", nargs='+', help="IDs of all CRDs in the analysis")
 parser.add_argument("--firmwares", nargs='+', help="DAQ firmware versions")
-parser.add_argument("--combineOut")
+parser.add_argument("--combineOut", help="Combined data from all intermediate Wire Delay files")
 parser.add_argument("--sort_sortKey1")
 parser.add_argument("--sort_sortKey2")
 parser.add_argument("--sortOut")
@@ -62,9 +60,23 @@ parser.add_argument("--eventCandidates", help="eventCandidates file")
 args = parser.parse_args()
 
 
-# The Workflow
+## The Workflow ##
 #print(args.thresholdAll)
+
+# 1) WireDelayMultiple() takes input Threshold (.thresh) files and converts
+#    each to a Wire Delay (.wd) file:
 WireDelayMultiple(threshFiles=args.thresholdAll, outFileNames=args.wireDelayData, geoDir=args.geoDir, daqIds=args.detectors, firmwares=args.firmwares)
+
+# 2) Combine() takes the WD files output by WireDelayMultiple() and combines
+#    them into a single file with name given by --combineOut
 Combine(inputs=args.wireDelayData, outputs=[args.combineOut])
-Sort(inputs=[args.combineOut], outputs=[args.sortOut], key1=args.sort_sortKey1, key2=args.sort_sortKey2)
-EventSearch(inputs=[args.sortOut], outputs=[args.eventCandidates], gate=args.gate, detCoinc=args.detectorCoincidence, chanCoinc=args.channelCoincidence, eventCoinc=args.eventCoincidence)
+
+# 3) Sort() sorts the --combineOut file, producing a new file with name given
+#    by --sortOut
+#Sort(inputs=[args.combineOut], outputs=[args.sortOut], key1=args.sort_sortKey1, key2=args.sort_sortKey2)
+
+# 4) EventSearch() processes the --sortOut file and identifies event
+#    candidates in a output file with name given by --eventCandidates
+# NB: This output file is interpreted by the e-Lab webapp, which expects it
+#    to be named "eventCandidates"
+#EventSearch(inputs=[args.sortOut], outputs=[args.eventCandidates], gate=args.gate, detCoinc=args.detectorCoincidence, #chanCoinc=args.channelCoincidence, eventCoinc=args.eventCoincidence)
