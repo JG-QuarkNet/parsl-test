@@ -5,28 +5,20 @@ from parsl import *
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
+
 ## Define Apps ##
 @App('bash', dfk)
 def WireDelay(inputs=[], outputs=[], geoDir='', daqId='', fw=''):
-		#pass
-		#print(inputs)
-		#print(inputs,outputs,geoDir,daqId,fw)
-		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(inputs[0],outputs[0],geoDir,daqId,fw)
+		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(threshIn,wireDelayOut,geoDir,daqId,fw)
+
 
 @App('python', dfk)
-def WireDelayMultiple(threshFiles=[], outFileNames=[], geoDir='', daqIds=[], firmwares=''):
-		#print(threshFiles, outFileNames, geoDir, daqIds, firmwares)
-		#print(threshFiles)
+def WireDelayMultiple(threshFiles=[], outputs=[], geoDir='', daqIds=[], firmwares=''):
 		for i in range(len(threshFiles)):
-				#print(i)
-				#print(threshFiles[i])
-				#print([threshFiles[i]])
-				#print([threshFiles[i]],[outFileNames[i]],geoDir,daqIds[i],firmwares[i])
-				WireDelay(inputs=[threshFiles[i]],outputs=[outFileNames[i]],geoDir=geoDir,daqId=daqIds[i],fw=firmwares[i])
+				WireDelay(inputs=[threshFiles[i]],outputs=[outputs[i]],geoDir=geoDir,daqId=daqIds[i],fw=firmwares[i])
 
 @App('bash', dfk)
 def Combine(inputs=[],outputs=[]):
-		#print(inputs,outputs)
 		return 'perl perl/Combine.pl ' + ' '.join(inputs) + ' ' + outputs[0]
 
 @App('bash', dfk)
@@ -61,22 +53,22 @@ args = parser.parse_args()
 
 
 ## The Workflow ##
-#print(args.thresholdAll)
 
 # 1) WireDelayMultiple() takes input Threshold (.thresh) files and converts
 #    each to a Wire Delay (.wd) file:
-WireDelayMultiple(threshFiles=args.thresholdAll, outFileNames=args.wireDelayData, geoDir=args.geoDir, daqIds=args.detectors, firmwares=args.firmwares)
+WdmFuture = WireDelayMultiple(threshFiles=args.thresholdAll, outputs=args.wireDelayData, geoDir=args.geoDir, daqIds=args.detectors, firmwares=args.firmwares)
 
 # 2) Combine() takes the WD files output by WireDelayMultiple() and combines
-#    them into a single file with name given by --combineOut
-Combine(inputs=args.wireDelayData, outputs=[args.combineOut])
+#    them into a single file with name given by --combineOut 
+CombineFuture = Combine(inputs=WdmFuture.outputs, outputs=[args.combineOut])
 
 # 3) Sort() sorts the --combineOut file, producing a new file with name given
 #    by --sortOut
-#Sort(inputs=[args.combineOut], outputs=[args.sortOut], key1=args.sort_sortKey1, key2=args.sort_sortKey2)
+SortFuture = Sort(inputs=CombineFuture.outputs, outputs=[args.sortOut], key1=args.sort_sortKey1, key2=args.sort_sortKey2)
+
 
 # 4) EventSearch() processes the --sortOut file and identifies event
 #    candidates in a output file with name given by --eventCandidates
 # NB: This output file is interpreted by the e-Lab webapp, which expects it
 #    to be named "eventCandidates"
-#EventSearch(inputs=[args.sortOut], outputs=[args.eventCandidates], gate=args.gate, detCoinc=args.detectorCoincidence, #chanCoinc=args.channelCoincidence, eventCoinc=args.eventCoincidence)
+EventSearch(inputs=SortFuture.outputs, outputs=[args.eventCandidates], gate=args.gate, detCoinc=args.detectorCoincidence, chanCoinc=args.channelCoincidence, eventCoinc=args.eventCoincidence)
