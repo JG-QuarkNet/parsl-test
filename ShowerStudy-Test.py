@@ -7,15 +7,20 @@ dfk = DataFlowKernel(executors=[workers])
 
 
 ## Define Apps ##
+#@App('bash', dfk)
+#def WireDelay(threshIn, wireDelayOut, geoDir='', daqId='', fw=''):
+#		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(threshIn,wireDelayOut,geoDir,daqId,fw)
+
 @App('bash', dfk)
 def WireDelay(inputs=[], outputs=[], geoDir='', daqId='', fw=''):
-		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(threshIn,wireDelayOut,geoDir,daqId,fw)
-
+		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(inputs[0],outputs[0],geoDir,daqId,fw)
 
 @App('python', dfk)
 def WireDelayMultiple(threshFiles=[], outputs=[], geoDir='', daqIds=[], firmwares=''):
 		for i in range(len(threshFiles)):
-				WireDelay(inputs=[threshFiles[i]],outputs=[outputs[i]],geoDir=geoDir,daqId=daqIds[i],fw=firmwares[i])
+				WireDelay_future = WireDelay(inputs=[threshFiles[i]],outputs=[outputs[i]],geoDir=geoDir,daqId=daqIds[i],fw=firmwares[i])
+				#WireDelay_future = WireDelay(threshIn=[threshFiles[i]],wireDelayOut=[outputs[i]],geoDir=geoDir,daqId=daqIds[i],fw=firmwares[i])
+				WireDelay_future.result()
 
 @App('bash', dfk)
 def Combine(inputs=[],outputs=[]):
