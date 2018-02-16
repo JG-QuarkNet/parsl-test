@@ -7,24 +7,27 @@ dfk = DataFlowKernel(executors=[workers])
 
 
 ## Define Apps ##
-#@App('bash', dfk)
-#def WireDelay(threshIn, wireDelayOut, geoDir='', daqId='', fw=''):
-#		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(threshIn,wireDelayOut,geoDir,daqId,fw)
-
 @App('bash', dfk)
-def WireDelay(inputs=[], outputs=[], geoDir='', daqId='', fw=''):
-		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(inputs[0],outputs[0],geoDir,daqId,fw)
+def WireDelay(threshIn='', outputs=[], geoDir='', daqId='', fw=''):
+		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(threshIn,outputs[0],geoDir,daqId,fw)
 
+#@App('bash', dfk)
+#def WireDelay(inputs=[], outputs=[], geoDir='', daqId='', fw=''):
+#		return 'perl perl/WireDelay.pl %s %s %s %s %s' %(inputs[0],outputs[0],geoDir,daqId,fw)
+
+"""
 @App('python', dfk)
 def WireDelayMultiple(threshFiles=[], outputs=[], geoDir='', daqIds=[], firmwares=''):
 		for i in range(len(threshFiles)):
 				WireDelay_future = WireDelay(inputs=[threshFiles[i]],outputs=[outputs[i]],geoDir=geoDir,daqId=daqIds[i],fw=firmwares[i])
 				#WireDelay_future = WireDelay(threshIn=[threshFiles[i]],wireDelayOut=[outputs[i]],geoDir=geoDir,daqId=daqIds[i],fw=firmwares[i])
 				WireDelay_future.result()
+"""
 
 @App('bash', dfk)
 def Combine(inputs=[],outputs=[]):
-		return 'perl perl/Combine.pl ' + ' '.join(inputs) + ' ' + outputs[0]
+		print("inside Combine checkpoint")
+		return 'perl perl/Combine.pl ' + ' '.join(inputs) + ' ' + str(outputs[0])
 
 @App('bash', dfk)
 def Sort(inputs=[], outputs=[], key1='1', key2='1'):
@@ -59,13 +62,19 @@ args = parser.parse_args()
 
 ## The Workflow ##
 
-# 1) WireDelayMultiple() takes input Threshold (.thresh) files and converts
+# 1) WireDelay() takes input Threshold (.thresh) files and converts
 #    each to a Wire Delay (.wd) file:
-WdmFuture = WireDelayMultiple(threshFiles=args.thresholdAll, outputs=args.wireDelayData, geoDir=args.geoDir, daqIds=args.detectors, firmwares=args.firmwares)
+WireDelay_futures = []
+for i in range(len(args.thresholdAll)):
+		WireDelay_futures.append(WireDelay(threshIn=args.thresholdAll[i], outputs=[args.wireDelayData[i]], geoDir=args.geoDir, daqId=args.detectors[i],fw=args.firmwares[i]))
 
-# 2) Combine() takes the WD files output by WireDelayMultiple() and combines
-#    them into a single file with name given by --combineOut 
-CombineFuture = Combine(inputs=WdmFuture.outputs, outputs=[args.combineOut])
+WireDelay_outputs = [i.result() for i in WireDelay_futures]
+
+print("pre-combine checkpoint")
+
+# 2) Combine() takes the WireDelay files output by WireDelay() and combines
+#    them into a single file with name given by --combineOut
+CombineFuture = Combine(inputs=WireDelay_outputs, outputs=[args.combineOut])
 
 # 3) Sort() sorts the --combineOut file, producing a new file with name given
 #    by --sortOut
