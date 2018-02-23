@@ -17,7 +17,7 @@ def WireDelay(threshIn='', outputs=[], geoDir='', daqId='', fw=''):
 
 @App('bash', dfk)
 def Combine(inputs=[],outputs=[]):
-		filenames = [str(i) for i in inputs]
+		#filenames = [str(i) for i in inputs]
 		print("inside Combine checkpoint 1")
 		print(' '.join(filenames) )
 		#print('perl perl/Combine.pl ' + ' '.join(inputs) + ' ' + str(outputs[0]))
